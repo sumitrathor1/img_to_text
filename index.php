@@ -4,6 +4,15 @@ declare(strict_types=1);
 $imagesDir = __DIR__ . DIRECTORY_SEPARATOR . 'saved_images';
 $imagesUrlPath = 'saved_images';
 
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
 function jsonResponse(array $data, int $status = 200): void
 {
     http_response_code($status);
@@ -159,9 +168,17 @@ function listSavedImages(string $imagesDir, string $imagesUrlPath): array
 
 $api = $_GET['api'] ?? '';
 
-if ($api === 'save-image' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $payload = json_decode((string) file_get_contents('php://input'), true);
-    $rawImageUrl = is_array($payload) ? (string) ($payload['imageUrl'] ?? '') : '';
+if ($api === 'save-image' && in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['POST', 'GET'], true)) {
+    $rawImageUrl = '';
+
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+        $payload = json_decode((string) file_get_contents('php://input'), true);
+        $rawImageUrl = is_array($payload) ? (string) ($payload['imageUrl'] ?? '') : '';
+    }
+
+    if ($rawImageUrl === '') {
+        $rawImageUrl = (string) ($_GET['imageUrl'] ?? '');
+    }
 
     if ($rawImageUrl === '') {
         jsonResponse(['ok' => false, 'message' => 'imageUrl is required.'], 400);
