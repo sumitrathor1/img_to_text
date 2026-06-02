@@ -222,6 +222,55 @@ if ($api === 'save-image' && in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['POS
     }
 }
 
+if ($api === 'upload-image' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    try {
+
+        if (!isset($_FILES['image'])) {
+            throw new RuntimeException('No image uploaded.');
+        }
+
+        if (!is_dir($imagesDir)) {
+            mkdir($imagesDir, 0777, true);
+        }
+
+        $tmpFile = $_FILES['image']['tmp_name'];
+
+        $binary = file_get_contents($tmpFile);
+
+        $extension = detectImageExtension($binary);
+
+        $fileName =
+            date('Ymd_His') .
+            '_' .
+            bin2hex(random_bytes(4)) .
+            '.' .
+            $extension;
+
+        $targetPath =
+            $imagesDir .
+            DIRECTORY_SEPARATOR .
+            $fileName;
+
+        if (!move_uploaded_file($tmpFile, $targetPath)) {
+            throw new RuntimeException('Could not save image.');
+        }
+
+        jsonResponse([
+            'ok' => true,
+            'file' => $fileName,
+            'url' => $imagesUrlPath . '/' . rawurlencode($fileName)
+        ]);
+
+    } catch (Throwable $e) {
+
+        jsonResponse([
+            'ok' => false,
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
+
 if ($api === 'list-images' && $_SERVER['REQUEST_METHOD'] === 'GET') {
     jsonResponse([
         'ok' => true,
